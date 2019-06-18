@@ -1,14 +1,13 @@
 /* @flow */
 
-import { get, without } from 'lodash';
+import { get, isEqual, find, without } from 'lodash';
 import actionTypes from './actionTypes';
-import getSimilarActionInQueue from '../utils/getSimilarActionInQueue';
 import type {
   FluxAction,
   FluxActionWithPreviousIntent,
   FluxActionForRemoval,
   NetworkState,
-} from '../types';
+} from './types';
 
 export const initialState = {
   isConnected: true,
@@ -17,7 +16,10 @@ export const initialState = {
 
 function handleOfflineAction(
   state: NetworkState,
-  { payload: { prevAction, prevThunk }, meta }: FluxActionWithPreviousIntent,
+  {
+    payload: { prevAction, prevThunk } = {},
+    meta,
+  }: FluxActionWithPreviousIntent,
 ): NetworkState {
   const isActionToRetry =
     typeof prevAction === 'object' && get(meta, 'retry') === true;
@@ -32,9 +34,8 @@ function handleOfflineAction(
       typeof actionToLookUp === 'object'
         ? { ...actionToLookUp, meta }
         : actionToLookUp;
-    const similarActionQueued = getSimilarActionInQueue(
-      actionWithMetaData,
-      state.actionQueue,
+    const similarActionQueued = find(state.actionQueue, (action: *) =>
+      isEqual(action, actionWithMetaData),
     );
 
     return {
@@ -54,9 +55,8 @@ function handleRemoveActionFromQueue(
   state: NetworkState,
   action: FluxActionForRemoval,
 ): NetworkState {
-  const similarActionQueued = getSimilarActionInQueue(
-    action,
-    state.actionQueue,
+  const similarActionQueued = find(state.actionQueue, (a: *) =>
+    isEqual(action, a),
   );
 
   return {
@@ -99,8 +99,4 @@ export default function(
     default:
       return state;
   }
-}
-
-export function networkSelector(state: { network: NetworkState }) {
-  return state.network;
 }
